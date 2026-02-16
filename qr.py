@@ -52,7 +52,7 @@ def elegir_ruta() -> None:
 ventana = tk.Tk()
 ventana.title("Generador de QR")
 ventana.geometry("460x235")
-ventana.resizable(False, False)
+ventana.resizable(True, True)
 
 tk.Label(ventana, text="Texto o URL:").pack(pady=(15, 5))
 
