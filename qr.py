@@ -1,74 +1,121 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
-
 import qrcode
 
 
-def generar_qr() -> None:
-    data = entrada_texto.get().strip()
+class QRGenerator:
+    """contiene la lógica de generación y guardado del código QR."""
 
-    if not data:
-        messagebox.showwarning("Dato faltante", "Ingresa un texto o URL para generar el QR.")
-        return
+    def generar(self, data: str, ruta: str) -> None:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
 
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(data)
-    qr.make(fit=True)
-
-    ruta_salida = entrada_archivo.get().strip()
-    if not ruta_salida:
-        ruta_salida = "QR.png"
-    if not ruta_salida.lower().endswith(".png"):
-        ruta_salida += ".png"
-
-    img = qr.make_image(fill_color="black", back_color="white")
-    try:
-        img.save(ruta_salida)
-    except OSError as error:
-        messagebox.showerror("Error al guardar", f"No se pudo guardar el archivo:\n{error}")
-        return
-
-    estado_var.set(f"QR generado: {ruta_salida}")
-    messagebox.showinfo("Listo", f"Se genero el archivo:\n{ruta_salida}")
+        img = qr.make_image(fill_color="black", back_color="white")
+        img.save(ruta)
 
 
-def elegir_ruta() -> None:
-    ruta = filedialog.asksaveasfilename(
-        title="Guardar QR como",
-        defaultextension=".png",
-        filetypes=[("Imagen PNG", "*.png"), ("Todos los archivos", "*.*")],
-        initialfile="QR.png",
-    )
-    if ruta:
-        entrada_archivo.delete(0, tk.END)
-        entrada_archivo.insert(0, ruta)
+class QRApp:
+    """contiene la interfaz gráfica y el flujo de la aplicación."""
+
+    def __init__(self):
+        self.generator = QRGenerator()
+
+        self.ventana = tk.Tk()
+        self.ventana.title("Generador de QR")
+        self.ventana.geometry("460x235")
+        self.ventana.resizable(True, True)
+
+        self._crear_widgets()
+
+    def _crear_widgets(self):
+        tk.Label(self.ventana, text="Texto o URL:").pack(pady=(15, 5))
+
+        self.entrada_texto = tk.Entry(self.ventana, width=45)
+        self.entrada_texto.pack(pady=(0, 10))
+        self.entrada_texto.focus()
+
+        tk.Label(self.ventana, text="Archivo de salida (.png):").pack(pady=(0, 5))
+
+        self.entrada_archivo = tk.Entry(self.ventana, width=45)
+        self.entrada_archivo.insert(0, "QR.png")
+        self.entrada_archivo.pack(pady=(0, 8))
+
+        tk.Button(
+            self.ventana,
+            text="Elegir ruta...",
+            command=self.elegir_ruta
+        ).pack(pady=(0, 8))
+
+        tk.Button(
+            self.ventana,
+            text="Generar QR",
+            command=self.generar_qr
+        ).pack(pady=5)
+
+        self.estado_var = tk.StringVar(value="Esperando datos...")
+        tk.Label(self.ventana, textvariable=self.estado_var).pack(pady=(10, 0))
+
+    #Captura y validación
 
 
-ventana = tk.Tk()
-ventana.title("Generador de QR")
-ventana.geometry("460x235")
-ventana.resizable(True, True)
+    def _obtener_texto(self) -> str:
+        texto = self.entrada_texto.get().strip()
+        if not texto:
+            raise ValueError("Ingresa un texto o URL para generar el QR.")
+        return texto
 
-tk.Label(ventana, text="Texto o URL:").pack(pady=(15, 5))
+    def _obtener_ruta(self) -> str:
+        ruta = self.entrada_archivo.get().strip() or "QR.png"
+        if not ruta.lower().endswith(".png"):
+            ruta += ".png"
+        return ruta
 
-entrada_texto = tk.Entry(ventana, width=45)
-entrada_texto.pack(pady=(0, 10))
-entrada_texto.focus()
 
-tk.Label(ventana, text="Archivo de salida (.png):").pack(pady=(0, 5))
-entrada_archivo = tk.Entry(ventana, width=45)
-entrada_archivo.insert(0, "QR.png")
-entrada_archivo.pack(pady=(0, 8))
+    #Eventos UI
 
-tk.Button(ventana, text="Elegir ruta...", command=elegir_ruta).pack(pady=(0, 8))
-tk.Button(ventana, text="Generar QR", command=generar_qr).pack(pady=5)
 
-estado_var = tk.StringVar(value="Esperando datos...")
-tk.Label(ventana, textvariable=estado_var).pack(pady=(10, 0))
+    def elegir_ruta(self) -> None:
+        ruta = filedialog.asksaveasfilename(
+            title="Guardar QR como",
+            defaultextension=".png",
+            filetypes=[("Imagen PNG", "*.png"), ("Todos los archivos", "*.*")],
+            initialfile="QR.png",
+        )
+        if ruta:
+            self.entrada_archivo.delete(0, tk.END)
+            self.entrada_archivo.insert(0, ruta)
 
-ventana.mainloop()
+    def generar_qr(self) -> None:
+        try:
+            texto = self._obtener_texto()
+            ruta = self._obtener_ruta()
+
+            self.generator.generar(texto, ruta)
+
+            self.estado_var.set(f"QR generado: {ruta}")
+            messagebox.showinfo("Listo", f"Se generó el archivo:\n{ruta}")
+
+        except ValueError as error:
+            messagebox.showwarning("Dato faltante", str(error))
+
+        except OSError as error:
+            messagebox.showerror(
+                "Error al guardar",
+                f"No se pudo guardar el archivo:\n{error}"
+            )
+
+    def run(self) -> None:
+        self.ventana.mainloop()
+
+
+#Punto de entrada
+
+if __name__ == "__main__":
+    app = QRApp()
+    app.run()
