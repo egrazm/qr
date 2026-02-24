@@ -4,7 +4,7 @@ Aplicación de escritorio en Python con interfaz gráfica (Tkinter) para generar
 
 Permite ingresar texto o una URL, elegir la ruta de salida y generar el archivo fácilmente.
 
-## Requisitos
+## Requisitos 
 
 - Python 3.13 o superior
 - pip (incluido con Python)
